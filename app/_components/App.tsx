@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useCallback } from "react";
+import { useRef, useState, useCallback } from "react";
 import { useSignal, type Mode } from "@/app/_hooks/useSignal";
 import { useCamera } from "@/app/_hooks/useCamera";
 import { useQueryId } from "@/app/_hooks/useQueryId";
@@ -13,35 +13,26 @@ import { SolidColor } from "./modes/SolidColor";
 import { RedGrain } from "./modes/RedGrain";
 import { SinWaveMode } from "./modes/SinWaveMode";
 import { DebugPanel } from "./DebugPanel";
+import { StartScreen } from "./StartScreen";
 
 export function App() {
+  const [ready, setReady] = useState(false);
   const { mode, setMode, audioEnabled, setAudioEnabled } = useSignal(7);
   const { stream, start: startCamera } = useCamera();
   const { id: deviceId, setId: setDeviceId } = useQueryId();
   const cameraRef = useRef<VideoHandle>(null);
   const videoRef = useRef<VideoHandle>(null);
-  const startedRef = useRef(false);
 
-  const ensureStarted = useCallback(() => {
-    if (startedRef.current) return;
-    startedRef.current = true;
+  const handleReady = useCallback(() => {
+    setReady(true);
     startCamera();
+    // 超音波受信を自動有効化（マイク許可済みなので確実に動く）
+    setAudioEnabled(true);
     setTimeout(() => {
       const video = videoRef.current?.getVideo();
       if (video) video.play().catch(() => {});
     }, 100);
-  }, [startCamera]);
-
-  // Auto-start on any user gesture (click or keydown)
-  useEffect(() => {
-    const handler = () => ensureStarted();
-    window.addEventListener("click", handler, { once: true });
-    window.addEventListener("keydown", handler, { once: true });
-    return () => {
-      window.removeEventListener("click", handler);
-      window.removeEventListener("keydown", handler);
-    };
-  }, [ensureStarted]);
+  }, [startCamera, setAudioEnabled]);
 
   const renderMode = useCallback(
     (m: number) => {
@@ -69,10 +60,14 @@ export function App() {
     [deviceId]
   );
 
+  if (!ready) {
+    return <StartScreen onReady={handleReady} />;
+  }
+
   return (
     <div style={{ position: "fixed", inset: 0, background: "#000" }}>
       <CameraSource ref={cameraRef} stream={stream} />
-      <VideoSource ref={videoRef} started={startedRef.current} />
+      <VideoSource ref={videoRef} started={ready} />
       <ModeRenderer mode={mode} renderMode={renderMode} />
       <DebugPanel
         mode={mode}
