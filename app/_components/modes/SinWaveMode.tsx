@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 
-const SPEED = 1.0; // Hz
+const SPEED = 1.0 / 3; // Hz（周期3秒）
 const TOTAL_DEVICES = 20;
 
 interface SinWaveModeProps {
