@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useCallback, useMemo } from "react";
+import { useRef, useState, useCallback } from "react";
 import { useSignal, type Mode } from "@/app/_hooks/useSignal";
 import { useCamera } from "@/app/_hooks/useCamera";
 import { useQueryId } from "@/app/_hooks/useQueryId";
@@ -15,36 +15,38 @@ import { SinWaveMode } from "./modes/SinWaveMode";
 import { DebugPanel } from "./DebugPanel";
 import { StartScreen } from "./StartScreen";
 
+const DEFAULT_WHEP = "https://b.siobud.com/nxpc";
+
+function buildWhepProxyUrl(raw: string): string {
+  let target = raw;
+  let token = "";
+  try {
+    const url = new URL(raw);
+    const streamKey = url.pathname.replace(/^\//, "").replace(/\/$/, "");
+    if (streamKey && !url.pathname.startsWith("/api/")) {
+      token = streamKey;
+      url.pathname = `/api/whep/${streamKey}`;
+      url.search = "";
+      target = url.toString();
+    }
+  } catch { /* raw URLをそのまま使う */ }
+  let proxyUrl = `/api/whep?url=${encodeURIComponent(target)}`;
+  if (token) proxyUrl += `&token=${encodeURIComponent(token)}`;
+  return proxyUrl;
+}
+
+function getInitialWhep(): string {
+  if (typeof window === "undefined") return DEFAULT_WHEP;
+  return new URLSearchParams(window.location.search).get("whep") || DEFAULT_WHEP;
+}
+
 export function App() {
   const [ready, setReady] = useState(false);
   const { mode, setMode, audioEnabled, setAudioEnabled } = useSignal(7);
   const { stream, start: startCamera } = useCamera();
   const { id: deviceId, setId: setDeviceId } = useQueryId();
-  const whepUrl = useMemo(() => {
-    if (typeof window === "undefined") return undefined;
-    const raw = new URLSearchParams(window.location.search).get("whep");
-    if (!raw) return undefined;
-    // Broadcast BoxのページURL → WHEP APIエンドポイントに変換
-    // 例: https://b.siobud.com/nxpc → https://b.siobud.com/api/whep/nxpc (token=nxpc)
-    let target = raw;
-    let token = "";
-    try {
-      const url = new URL(raw);
-      const streamKey = url.pathname.replace(/^\//, "").replace(/\/$/, "");
-      if (streamKey && !url.pathname.startsWith("/api/")) {
-        token = streamKey;
-        url.pathname = `/api/whep/${streamKey}`;
-        url.search = "";
-        target = url.toString();
-      }
-    } catch { /* raw URLをそのまま使う */ }
-    // CORS回避: API Routeプロキシ経由
-    const paramToken = new URLSearchParams(window.location.search).get("token");
-    const finalToken = paramToken || token;
-    let proxyUrl = `/api/whep?url=${encodeURIComponent(target)}`;
-    if (finalToken) proxyUrl += `&token=${encodeURIComponent(finalToken)}`;
-    return proxyUrl;
-  }, []);
+  const [whepRaw, setWhepRaw] = useState(getInitialWhep);
+  const whepUrl = buildWhepProxyUrl(whepRaw);
   const cameraRef = useRef<VideoHandle>(null);
   const videoRef = useRef<VideoHandle>(null);
 
@@ -99,6 +101,8 @@ export function App() {
         setMode={setMode}
         deviceId={deviceId}
         setDeviceId={setDeviceId}
+        whepRaw={whepRaw}
+        setWhepRaw={setWhepRaw}
       />
     </div>
   );

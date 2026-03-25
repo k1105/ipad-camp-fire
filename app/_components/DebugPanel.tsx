@@ -8,11 +8,14 @@ interface DebugPanelProps {
   setMode: (m: Mode) => void;
   deviceId: number;
   setDeviceId: (id: number) => void;
+  whepRaw: string;
+  setWhepRaw: (url: string) => void;
 }
 
-export function DebugPanel({ mode, setMode, deviceId, setDeviceId }: DebugPanelProps) {
+export function DebugPanel({ mode, setMode, deviceId, setDeviceId, whepRaw, setWhepRaw }: DebugPanelProps) {
   const [visible, setVisible] = useState(false);
   const [idInput, setIdInput] = useState(String(deviceId));
+  const [whepInput, setWhepInput] = useState(whepRaw);
   const lastTapRef = useRef(0);
 
   const handleDoubleTap = useCallback(() => {
@@ -94,6 +97,22 @@ export function DebugPanel({ mode, setMode, deviceId, setDeviceId }: DebugPanelP
           <button onClick={applyId} style={styles.apply}>
             設定
           </button>
+
+          <div style={styles.divider} />
+
+          <div style={styles.label}>WHEP URL</div>
+          <input
+            value={whepInput}
+            onChange={(e) => setWhepInput(e.target.value)}
+            style={styles.input}
+            placeholder="https://host/streamKey"
+          />
+          <button
+            onClick={() => setWhepRaw(whepInput)}
+            style={styles.apply}
+          >
+            WHEP 適用
+          </button>
         </div>
       )}
     </>
@@ -159,6 +178,18 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 600,
     padding: "10px 0",
     cursor: "pointer",
+  },
+  input: {
+    width: "100%",
+    padding: "6px 8px",
+    fontSize: 12,
+    fontFamily: "monospace",
+    background: "#1a1a1a",
+    color: "#fff",
+    borderWidth: 0,
+    borderRadius: 4,
+    marginBottom: 8,
+    boxSizing: "border-box" as const,
   },
   apply: {
     marginTop: 8,
