@@ -43,7 +43,7 @@ function getInitialWhep(): string {
 export function App() {
   const [ready, setReady] = useState(false);
   const { mode, setMode, audioEnabled, setAudioEnabled } = useSignal(7);
-  const { stream, start: startCamera } = useCamera();
+  const { stream, start: startCamera, switchCamera } = useCamera();
   const { id: deviceId, setId: setDeviceId } = useQueryId();
   const [whepRaw, setWhepRaw] = useState(getInitialWhep);
   const whepUrl = buildWhepProxyUrl(whepRaw);
@@ -96,6 +96,18 @@ export function App() {
       <CameraSource ref={cameraRef} stream={stream} />
       <VideoSource ref={videoRef} started={ready} whepUrl={whepUrl} />
       <ModeRenderer mode={mode} renderMode={renderMode} />
+      {/* 左上タップでカメラ切り替え */}
+      <div
+        onClick={switchCamera}
+        style={{
+          position: "fixed",
+          top: 0,
+          right: 0,
+          width: 80,
+          height: 80,
+          zIndex: 9998,
+        }}
+      />
       <DebugPanel
         mode={mode}
         setMode={setMode}
