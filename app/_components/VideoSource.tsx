@@ -20,6 +20,12 @@ export const VideoSource = forwardRef<VideoHandle, VideoSourceProps>(
     useEffect(() => {
       if (!started || !whepUrl) return;
 
+      const video = videoRef.current;
+      const mediaStream = new MediaStream();
+      if (video) {
+        video.srcObject = mediaStream;
+      }
+
       const pc = new RTCPeerConnection();
       pcRef.current = pc;
 
@@ -27,33 +33,52 @@ export const VideoSource = forwardRef<VideoHandle, VideoSourceProps>(
       pc.addTransceiver("audio", { direction: "recvonly" });
 
       pc.ontrack = (e) => {
-        const video = videoRef.current;
-        if (video && e.streams[0]) {
-          video.srcObject = e.streams[0];
+        mediaStream.addTrack(e.track);
+        if (video) {
           video.play().catch(() => {});
         }
       };
 
       (async () => {
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
+        try {
+          const offer = await pc.createOffer();
+          await pc.setLocalDescription(offer);
 
-        const res = await fetch(whepUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/sdp" },
-          body: offer.sdp,
-        });
+          // ICE候補の収集完了を待つ
+          await new Promise<void>((resolve) => {
+            if (pc.iceGatheringState === "complete") {
+              resolve();
+            } else {
+              const check = () => {
+                if (pc.iceGatheringState === "complete") {
+                  pc.removeEventListener("icegatheringstatechange", check);
+                  resolve();
+                }
+              };
+              pc.addEventListener("icegatheringstatechange", check);
+              setTimeout(() => {
+                pc.removeEventListener("icegatheringstatechange", check);
+                resolve();
+              }, 5000);
+            }
+          });
 
-        if (!res.ok) {
-          console.error("WHEP negotiation failed:", res.status);
-          return;
+          const res = await fetch(whepUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/sdp" },
+            body: pc.localDescription!.sdp,
+          });
+
+          if (!res.ok) {
+            console.error("WHEP negotiation failed:", res.status);
+            return;
+          }
+
+          const answerSdp = await res.text();
+          await pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
+        } catch (err) {
+          console.error("WHEP error:", err);
         }
-
-        const answerSdp = await res.text();
-        await pc.setRemoteDescription({
-          type: "answer",
-          sdp: answerSdp,
-        });
       })();
 
       return () => {

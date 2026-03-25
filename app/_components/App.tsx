@@ -22,7 +22,28 @@ export function App() {
   const { id: deviceId, setId: setDeviceId } = useQueryId();
   const whepUrl = useMemo(() => {
     if (typeof window === "undefined") return undefined;
-    return new URLSearchParams(window.location.search).get("whep") || undefined;
+    const raw = new URLSearchParams(window.location.search).get("whep");
+    if (!raw) return undefined;
+    // Broadcast BoxのページURL → WHEP APIエンドポイントに変換
+    // 例: https://b.siobud.com/nxpc → https://b.siobud.com/api/whep/nxpc (token=nxpc)
+    let target = raw;
+    let token = "";
+    try {
+      const url = new URL(raw);
+      const streamKey = url.pathname.replace(/^\//, "").replace(/\/$/, "");
+      if (streamKey && !url.pathname.startsWith("/api/")) {
+        token = streamKey;
+        url.pathname = `/api/whep/${streamKey}`;
+        url.search = "";
+        target = url.toString();
+      }
+    } catch { /* raw URLをそのまま使う */ }
+    // CORS回避: API Routeプロキシ経由
+    const paramToken = new URLSearchParams(window.location.search).get("token");
+    const finalToken = paramToken || token;
+    let proxyUrl = `/api/whep?url=${encodeURIComponent(target)}`;
+    if (finalToken) proxyUrl += `&token=${encodeURIComponent(finalToken)}`;
+    return proxyUrl;
   }, []);
   const cameraRef = useRef<VideoHandle>(null);
   const videoRef = useRef<VideoHandle>(null);
