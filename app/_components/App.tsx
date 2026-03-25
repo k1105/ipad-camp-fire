@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useMemo } from "react";
 import { useSignal, type Mode } from "@/app/_hooks/useSignal";
 import { useCamera } from "@/app/_hooks/useCamera";
 import { useQueryId } from "@/app/_hooks/useQueryId";
@@ -20,6 +20,10 @@ export function App() {
   const { mode, setMode, audioEnabled, setAudioEnabled } = useSignal(7);
   const { stream, start: startCamera } = useCamera();
   const { id: deviceId, setId: setDeviceId } = useQueryId();
+  const whepUrl = useMemo(() => {
+    if (typeof window === "undefined") return undefined;
+    return new URLSearchParams(window.location.search).get("whep") || undefined;
+  }, []);
   const cameraRef = useRef<VideoHandle>(null);
   const videoRef = useRef<VideoHandle>(null);
 
@@ -67,7 +71,7 @@ export function App() {
   return (
     <div style={{ position: "fixed", inset: 0, background: "#000" }}>
       <CameraSource ref={cameraRef} stream={stream} />
-      <VideoSource ref={videoRef} started={ready} />
+      <VideoSource ref={videoRef} started={ready} whepUrl={whepUrl} />
       <ModeRenderer mode={mode} renderMode={renderMode} />
       <DebugPanel
         mode={mode}
