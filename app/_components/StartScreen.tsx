@@ -42,12 +42,7 @@ export function StartScreen({ onReady }: StartScreenProps) {
   return (
     <div style={styles.container} onClick={status === "idle" ? handleStart : undefined}>
       {status === "idle" && (
-        <>
-          <div style={styles.icon}>🔥</div>
-          <div style={styles.title}>CAMP FIRE</div>
-          <div style={styles.subtitle}>タップして開始</div>
-          <div style={styles.hint}>カメラとマイクの使用を許可してください</div>
-        </>
+        <div style={styles.subtitle}>tap to start</div>
       )}
       {status === "requesting" && (
         <div style={styles.subtitle}>許可を待っています...</div>
