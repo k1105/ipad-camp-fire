@@ -6,7 +6,6 @@ import { AudioSender } from "@/app/_lib/audioSender";
 
 export default function ControlPage() {
   const [activeMode, setActiveMode] = useState<number | null>(null);
-  const [audioEnabled, setAudioEnabled] = useState(false);
   const [gain, setGain] = useState(0.5);
   const [duration, setDuration] = useState(0.5);
   const chRef = useRef<BroadcastChannel | null>(null);
@@ -34,17 +33,15 @@ export default function ControlPage() {
       // BroadcastChannel (same-origin tabs)
       chRef.current?.postMessage({ mode: key });
       // Audio signal
-      if (audioEnabled) {
-        if (!senderRef.current) {
-          senderRef.current = new AudioSender();
-          senderRef.current.gain = gain;
-          senderRef.current.duration = duration;
-          await senderRef.current.init();
-        }
-        await senderRef.current.send(key - 1); // mode 1-based → channel 0-based
+      if (!senderRef.current) {
+        senderRef.current = new AudioSender();
+        senderRef.current.gain = gain;
+        senderRef.current.duration = duration;
+        await senderRef.current.init();
       }
+      await senderRef.current.send(key - 1); // mode 1-based → channel 0-based
     },
-    [audioEnabled, gain, duration]
+    [gain, duration]
   );
 
   const stop = useCallback(() => {
@@ -57,42 +54,32 @@ export default function ControlPage() {
       <h1 style={styles.title}>Control</h1>
 
       <div style={styles.settings}>
-        <label style={styles.toggle}>
-          <input
-            type="checkbox"
-            checked={audioEnabled}
-            onChange={(e) => setAudioEnabled(e.target.checked)}
-          />
-          <span>超音波送信</span>
-        </label>
-        {audioEnabled && (
-          <div style={styles.sliders}>
-            <label style={styles.sliderRow}>
-              <span style={styles.sliderLabel}>Gain</span>
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.1}
-                value={gain}
-                onChange={(e) => setGain(Number(e.target.value))}
-              />
-              <span style={styles.sliderValue}>{gain.toFixed(1)}</span>
-            </label>
-            <label style={styles.sliderRow}>
-              <span style={styles.sliderLabel}>Duration</span>
-              <input
-                type="range"
-                min={0.2}
-                max={1}
-                step={0.1}
-                value={duration}
-                onChange={(e) => setDuration(Number(e.target.value))}
-              />
-              <span style={styles.sliderValue}>{duration.toFixed(1)}s</span>
-            </label>
-          </div>
-        )}
+        <div style={styles.sliders}>
+          <label style={styles.sliderRow}>
+            <span style={styles.sliderLabel}>Gain</span>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.1}
+              value={gain}
+              onChange={(e) => setGain(Number(e.target.value))}
+            />
+            <span style={styles.sliderValue}>{gain.toFixed(1)}</span>
+          </label>
+          <label style={styles.sliderRow}>
+            <span style={styles.sliderLabel}>Duration</span>
+            <input
+              type="range"
+              min={0.2}
+              max={1}
+              step={0.1}
+              value={duration}
+              onChange={(e) => setDuration(Number(e.target.value))}
+            />
+            <span style={styles.sliderValue}>{duration.toFixed(1)}s</span>
+          </label>
+        </div>
       </div>
 
       <div style={styles.grid}>
@@ -142,13 +129,6 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     gap: 12,
-  },
-  toggle: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    fontSize: 14,
-    cursor: "pointer",
   },
   sliders: {
     display: "flex",
